@@ -21,6 +21,8 @@
     "fresh": "*"
   },
   "devDependencies": {
+    "express": "*",
+    "supertest": "*",
     "coffee-script": "*",
     "mocha": "*",
     "expect.js": "*"

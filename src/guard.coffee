@@ -11,6 +11,8 @@ MemoryStore = require './memory_store'
 #   CACHE as external dependency - memory, mongo
 guard = (invalidators...) ->
   return (req, res, next) ->
+    return next() unless req.method is 'GET'
+
     guard.store.get req.url, (err, cached) ->
       return next(err) if err?
 
@@ -20,9 +22,12 @@ guard = (invalidators...) ->
 
       guard.emit 'miss', req.url, cached
 
-      res.cache = ({lastModified} = {}) ->
+      res.cacheable = ({lastModified} = {}) ->
         @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?
-        # Do this on res.end so we can check response code
+
+      end = res.end
+      res.end = ->
+        end.apply res, arguments
         guard.store.set req.url, @_headers, (err) ->
           return console.log("Error storing headers for path '#{req.url}'", err) if err?
           for invalidator in invalidators
@@ -39,9 +44,5 @@ guard.invalidate = (path, callback) ->
 guard.store = new MemoryStore()
 
 guard.__proto__ = EventEmitter.prototype
-
-guard.on 'hit',         (path, cached) -> console.log("Cache hit", path, cached)
-guard.on 'miss',        (path, cached) -> console.log("Cache miss", path, cached);
-guard.on 'invalidate',  (path, cached) -> console.log("Cache invalidate", path, cached and 'found' or 'not found');
 
 module.exports = guard

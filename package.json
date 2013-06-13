@@ -1,0 +1,32 @@
+{
+  "name": "connect-guard",
+  "version": "0.0.1",
+  "description": "Guard middleware that short circuits request handling if it can send a 304 Not Modified response. Intended to be used with reverse proxies like Varnish.",
+  "homepage": "http://goodeggs.github.com/connect-guard/",
+  "main": "lib/connect-guard",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/goodeggs/connect-guard.git"
+  },
+  "keywords": [
+    "connect",
+    "cache",
+    "proxy",
+    "cache-control",
+    "etag",
+    "last-modified",
+    "varnish"
+  ],
+  "dependencies": {
+    "fresh": "*"
+  },
+  "devDependencies": {
+    "coffee-script": "*",
+    "mocha": "*",
+    "expect.js": "*"
+  },
+  "scripts": {
+    "pretest": "./node_modules/.bin/coffee -cl -o lib src",
+    "test": "./node_modules/.bin/mocha"
+  }
+}

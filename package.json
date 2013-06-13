@@ -1,9 +1,9 @@
 {
   "name": "connect-guard",
   "version": "0.0.1",
-  "description": "Guard middleware that short circuits request handling if it can send a 304 Not Modified response. Intended to be used with reverse proxies like Varnish.",
+  "description": "Connect middleware that short circuits request handling if it can send a 304 Not Modified response. Intended to be used with reverse proxies like Varnish.",
   "homepage": "http://goodeggs.github.com/connect-guard/",
-  "main": "lib/connect-guard",
+  "main": "lib/guard",
   "repository": {
     "type": "git",
     "url": "git://github.com/goodeggs/connect-guard.git"

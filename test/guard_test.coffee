@@ -67,6 +67,25 @@ describe 'guard', ->
           expect(guard.store.paths['/users']).to.have.key 'last-modified'
           done(err)
 
+  describe 'with cached response', ->
+    {lastModified} = {}
+
+    beforeEach (done) ->
+      lastModified = new Date().toUTCString()
+      app.use guard()
+      app.get '/users', (req, res) ->
+        res.cacheable {lastModified}
+        res.send 'Users'
+      request(app).get('/users').end(done)
+
+    it 'sends 304', (done) ->
+      request(app)
+        .get('/users')
+        .set('If-Modified-Since', lastModified)
+        .expect(304)
+        .expect('Last-Modified', lastModified)
+        .end(done)
+
   describe 'with non-2xx response', ->
     beforeEach ->
       app.use guard()

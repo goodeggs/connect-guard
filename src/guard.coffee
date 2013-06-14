@@ -17,6 +17,7 @@ guard = (invalidators...) ->
 
       if fresh(req.headers, cached or {})
         guard.emit 'hit', req.url, cached
+        res.set cached
         return res.send 304
 
       guard.emit 'miss', req.url, cached

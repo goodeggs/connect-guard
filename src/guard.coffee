@@ -6,7 +6,6 @@ MemoryStore = require './memory_store'
 #   only cache 200-300 responses
 #   etag
 #   respect expires in response
-#   CACHE as external dependency - memory, mongo
 guard = (invalidators...) ->
   return (req, res, next) ->
     return next() unless req.method is 'GET'
@@ -30,8 +29,9 @@ guard = (invalidators...) ->
         for name in ['expires', 'last-modified', 'etag']
           headers[name] = @_headers[name] if @_headers[name]?
         if Object.keys(headers).length
-          guard.store.set req.url, @_headers, (err) ->
-            return console.log("Error storing headers for path '#{req.url}'", err) if err?
+          guard.store.set req.url, headers, (err) ->
+            return guard.emit('error', "Error storing headers for path '#{req.url}'", err) if err?
+            guard.emit('add', req.url, headers)
             for invalidator in invalidators
               invalidator.once 'stale', ->
                 guard.invalidate req.url

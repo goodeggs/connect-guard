@@ -21,7 +21,9 @@ describe 'guard', ->
       request(app)
         .get('/users')
         .expect(200, 'Users')
+        .expect('X-Connect-Guard', 'miss')
         .end (err, res) ->
+          expect(res.header['x-connect-guard']).to.be 'miss'
           expect(guard.store.paths).to.be.empty()
           done(err)
 
@@ -44,6 +46,7 @@ describe 'guard', ->
         .put('/users')
         .expect(200, 'Users')
         .end (err, res) ->
+          expect(res.header['x-connect-guard']).to.be undefined
           expect(guard.store.paths).to.be.empty()
           expect(expressResponse.cacheable).to.be undefined
           done(err)
@@ -84,8 +87,9 @@ describe 'guard', ->
         .set('If-Modified-Since', lastModified)
         .expect(304)
         .expect('Last-Modified', lastModified)
-        .expect('X-Connect-Guard', 'hit')
-        .end(done)
+        .end (err, res) ->
+          expect(res.header['x-connect-guard']).to.be 'hit'
+          done(err)
 
   describe 'with non-2xx response', ->
     beforeEach ->

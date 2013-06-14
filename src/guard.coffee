@@ -22,6 +22,7 @@ guard = (invalidators...) ->
         return res.send 304
 
       guard.emit 'miss', req.url, cached
+      res.set 'X-Connect-Guard', 'miss'
 
       res.cacheable = ({lastModified} = {}) ->
         @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?

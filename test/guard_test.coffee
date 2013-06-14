@@ -1,13 +1,13 @@
 expect = require 'expect.js'
 express = require 'express'
 request = require 'supertest'
-httpMocks = require 'node-mocks-http'
-guard = require '../'
+{MemoryStore} = guard = require '../'
 
 describe 'guard', ->
   {app, middleware, expressResponse} = {}
   beforeEach ->
     app = express()
+    guard.store = new MemoryStore()
     middleware = guard()
 
   describe 'with no cache headers in response', ->
@@ -20,7 +20,10 @@ describe 'guard', ->
     it 'passes request through middleware chain', (done) ->
       request(app)
         .get('/users')
-        .expect(200, 'Users', done)
+        .expect(200, 'Users')
+        .end (err, res) ->
+          expect(guard.store.paths).to.not.have.key '/users'
+          done(err)
 
     it 'mixes cacheable into response', (done) ->
       request(app)
@@ -61,4 +64,24 @@ describe 'guard', ->
         .end (err, res) ->
           expect(guard.store.paths).to.have.key '/users'
           expect(guard.store.paths['/users']).to.have.key 'last-modified'
+          done(err)
+
+  describe 'res.cacheable', ->
+    {lastModified} = {}
+    beforeEach ->
+      lastModified = new Date()
+      app.use middleware
+      app.get '/users', (req, res) ->
+        res.cacheable {lastModified}
+        res.send 'Users'
+
+    it 'adds response headers to the cache', (done) ->
+      request(app)
+        .get('/users')
+        .expect(200, 'Users')
+        .expect('Last-Modified', lastModified.toUTCString())
+        .end (err, res) ->
+          expect(guard.store.paths).to.have.key '/users'
+          expect(guard.store.paths['/users']).to.have.key 'last-modified'
+          expect(guard.store.paths['/users']['last-modified']).to.be lastModified.toUTCString()
           done(err)

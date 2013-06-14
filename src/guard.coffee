@@ -3,11 +3,9 @@ fresh = require 'fresh'
 MemoryStore = require './memory_store'
 
 # Next steps:
-#   only GET requests
 #   only cache 200-300 responses
 #   etag
 #   respect expires in response
-#   cache only needed headers
 #   CACHE as external dependency - memory, mongo
 guard = (invalidators...) ->
   return (req, res, next) ->
@@ -28,11 +26,15 @@ guard = (invalidators...) ->
       end = res.end
       res.end = ->
         end.apply res, arguments
-        guard.store.set req.url, @_headers, (err) ->
-          return console.log("Error storing headers for path '#{req.url}'", err) if err?
-          for invalidator in invalidators
-            invalidator.once 'stale', ->
-              guard.invalidate req.url
+        headers = {}
+        for name in ['expires', 'last-modified', 'etag']
+          headers[name] = @_headers[name] if @_headers[name]?
+        if Object.keys(headers).length
+          guard.store.set req.url, @_headers, (err) ->
+            return console.log("Error storing headers for path '#{req.url}'", err) if err?
+            for invalidator in invalidators
+              invalidator.once 'stale', ->
+                guard.invalidate req.url
 
       next()
 
@@ -41,6 +43,7 @@ guard.invalidate = (path, callback) ->
     @emit 'invalidate', path, cached
     callback(err, cached) if callback?
 
+guard.MemoryStore = MemoryStore
 guard.store = new MemoryStore()
 
 guard.__proto__ = EventEmitter.prototype

@@ -54,6 +54,8 @@ guard.invalidate = (path, callback) ->
 guard.MemoryStore = MemoryStore
 guard.store = new MemoryStore()
 
-guard.__proto__ = EventEmitter.prototype
+# Extend EventEmitter while retaining Function type for guard
+guard[prop] = val for prop, val of EventEmitter.prototype
+guard.setMaxListeners 0
 
 module.exports = guard

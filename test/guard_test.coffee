@@ -10,6 +10,9 @@ describe 'guard', ->
     app = express()
     guard.store = new MemoryStore()
 
+  it 'is a function', ->
+    expect(guard).to.be.a Function
+
   describe 'with no cache headers in response', ->
     beforeEach ->
       app.use guard()

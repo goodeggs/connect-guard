@@ -3,11 +3,9 @@ fresh = require 'fresh'
 MemoryStore = require './memory_store'
 
 # Next steps:
-#   etag
 #   respect expires in response
-#   respect and pass through Cache-Control: max-age in response
+#   respect Cache-Control: max-age in response
 #   cacheable strips cookies
-#   set X-Connect-Guard: hit/miss
 guard = (invalidators...) ->
   return (req, res, next) ->
     return next() unless req.method is 'GET'
@@ -24,8 +22,9 @@ guard = (invalidators...) ->
       guard.emit 'miss', req.url, cached
       res.set 'X-Connect-Guard', 'miss'
 
-      res.cacheable = ({lastModified} = {}) ->
+      res.cacheable = ({lastModified, etag} = {}) ->
         @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?
+        @set 'Etag', etag if etag?
 
       end = res.end
       res.end = ->

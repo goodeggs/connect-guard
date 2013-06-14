@@ -70,6 +70,25 @@ describe 'guard', ->
           expect(guard.store.paths['/users']).to.have.key 'last-modified'
           done(err)
 
+  describe 'with Etag response header', ->
+    {etag} = {}
+    beforeEach ->
+      etag = 'abc'
+      app.use guard()
+      app.get '/users', (req, res) ->
+        res.set 'Etag', etag
+        res.send 'Users'
+
+    it 'adds response headers to the cache', (done) ->
+      request(app)
+        .get('/users')
+        .expect(200, 'Users')
+        .expect('Etag', etag)
+        .end (err, res) ->
+          expect(guard.store.paths).to.have.key '/users'
+          expect(guard.store.paths['/users']).to.have.key 'etag'
+          done(err)
+
   describe 'with cached response', ->
     {lastModified} = {}
 
@@ -107,24 +126,47 @@ describe 'guard', ->
           done(err)
 
   describe 'res.cacheable', ->
-    {lastModified} = {}
+    {requested} = {}
     beforeEach ->
-      lastModified = new Date()
       app.use guard()
-      app.get '/users', (req, res) ->
-        res.cacheable {lastModified}
-        res.send 'Users'
 
-    it 'adds response headers to the cache', (done) ->
-      request(app)
-        .get('/users')
-        .expect(200, 'Users')
-        .expect('Last-Modified', lastModified.toUTCString())
-        .end (err, res) ->
-          expect(guard.store.paths).to.have.key '/users'
-          expect(guard.store.paths['/users']).to.have.key 'last-modified'
-          expect(guard.store.paths['/users']['last-modified']).to.be lastModified.toUTCString()
-          done(err)
+    describe 'lastModified', ->
+      {lastModified} = {}
+      beforeEach ->
+        lastModified = new Date()
+        app.get '/users', (req, res) ->
+          res.cacheable {lastModified}
+          res.send 'Users'
+        requested = request(app).get('/users')
+
+      it 'caches response', (done) ->
+        requested
+          .expect(200, 'Users')
+          .expect('Last-Modified', lastModified.toUTCString())
+          .end (err, res) ->
+            expect(guard.store.paths).to.have.key '/users'
+            expect(guard.store.paths['/users']).to.have.key 'last-modified'
+            expect(guard.store.paths['/users']['last-modified']).to.be lastModified.toUTCString()
+            done(err)
+
+    describe 'etag', ->
+      {etag} = {}
+      beforeEach ->
+        etag = '123'
+        app.get '/users', (req, res) ->
+          res.cacheable {etag}
+          res.send 'Users'
+        requested = request(app).get('/users')
+
+      it 'caches response', (done) ->
+        requested
+          .expect(200, 'Users')
+          .expect('Etag', etag)
+          .end (err, res) ->
+            expect(guard.store.paths).to.have.key '/users'
+            expect(guard.store.paths['/users']).to.have.key 'etag'
+            expect(guard.store.paths['/users']['etag']).to.be etag
+            done(err)
 
   describe 'invalidation', ->
     {invalidator} = {}

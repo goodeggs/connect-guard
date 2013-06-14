@@ -1,18 +1,18 @@
 expect = require 'expect.js'
 express = require 'express'
 request = require 'supertest'
+{EventEmitter} = require 'events'
 {MemoryStore} = guard = require '../'
 
 describe 'guard', ->
-  {app, middleware, expressResponse} = {}
+  {app, expressResponse} = {}
   beforeEach ->
     app = express()
     guard.store = new MemoryStore()
-    middleware = guard()
 
   describe 'with no cache headers in response', ->
     beforeEach ->
-      app.use middleware
+      app.use guard()
       app.get '/users', (req, res) ->
         expressResponse = res
         res.send 'Users'
@@ -34,7 +34,7 @@ describe 'guard', ->
 
   describe 'non-GET requests', ->
     beforeEach ->
-      app.use middleware
+      app.use guard()
       app.put '/users', (req, res) ->
         expressResponse = res
         res.send 'Users'
@@ -52,7 +52,7 @@ describe 'guard', ->
     {lastModified} = {}
     beforeEach ->
       lastModified = new Date().toUTCString()
-      app.use middleware
+      app.use guard()
       app.get '/users', (req, res) ->
         res.set 'Last-Modified', lastModified
         res.send 'Users'
@@ -69,7 +69,7 @@ describe 'guard', ->
 
   describe 'with non-2xx response', ->
     beforeEach ->
-      app.use middleware
+      app.use guard()
       app.get '/users', (req, res) ->
         res.set 'Last-Modified', new Date().toUTCString()
         res.send 404
@@ -86,7 +86,7 @@ describe 'guard', ->
     {lastModified} = {}
     beforeEach ->
       lastModified = new Date()
-      app.use middleware
+      app.use guard()
       app.get '/users', (req, res) ->
         res.cacheable {lastModified}
         res.send 'Users'
@@ -101,3 +101,22 @@ describe 'guard', ->
           expect(guard.store.paths['/users']).to.have.key 'last-modified'
           expect(guard.store.paths['/users']['last-modified']).to.be lastModified.toUTCString()
           done(err)
+
+  describe 'invalidation', ->
+    {invalidator} = {}
+
+    beforeEach (done) ->
+      invalidator = new EventEmitter()
+      app.use guard(invalidator)
+      app.get '/users', (req, res) ->
+        res.cacheable lastModified: new Date()
+        res.send 'Users'
+      request(app).get('/users').end (err, res) ->
+        expect(guard.store.paths).to.have.key '/users'
+        done(err)
+
+    it 'removes entry from response store', (done) ->
+      guard.on 'invalidate', ->
+        expect(guard.store.paths).to.not.have.key '/users'
+        done()
+      invalidator.emit 'stale'

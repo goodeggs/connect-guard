@@ -5,6 +5,9 @@ MemoryStore = require './memory_store'
 # Next steps:
 #   etag
 #   respect expires in response
+#   respect and pass through Cache-Control: max-age in response
+#   cacheable strips cookies
+#   set X-Connect-Guard: hit/miss
 guard = (invalidators...) ->
   return (req, res, next) ->
     return next() unless req.method is 'GET'
@@ -28,7 +31,7 @@ guard = (invalidators...) ->
         return unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
 
         headers = {}
-        for name in ['expires', 'last-modified', 'etag']
+        for name in ['expires', 'last-modified', 'etag', 'cache-control']
           headers[name] = @_headers[name] if @_headers[name]?
         if Object.keys(headers).length
           guard.store.set req.url, headers, (err) ->

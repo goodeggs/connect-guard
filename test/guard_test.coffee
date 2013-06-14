@@ -84,6 +84,7 @@ describe 'guard', ->
         .set('If-Modified-Since', lastModified)
         .expect(304)
         .expect('Last-Modified', lastModified)
+        .expect('X-Connect-Guard', 'hit')
         .end(done)
 
   describe 'with non-2xx response', ->

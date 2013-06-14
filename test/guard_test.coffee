@@ -22,7 +22,7 @@ describe 'guard', ->
         .get('/users')
         .expect(200, 'Users')
         .end (err, res) ->
-          expect(guard.store.paths).to.not.have.key '/users'
+          expect(guard.store.paths).to.be.empty()
           done(err)
 
     it 'mixes cacheable into response', (done) ->
@@ -44,6 +44,7 @@ describe 'guard', ->
         .put('/users')
         .expect(200, 'Users')
         .end (err, res) ->
+          expect(guard.store.paths).to.be.empty()
           expect(expressResponse.cacheable).to.be undefined
           done(err)
 
@@ -64,6 +65,21 @@ describe 'guard', ->
         .end (err, res) ->
           expect(guard.store.paths).to.have.key '/users'
           expect(guard.store.paths['/users']).to.have.key 'last-modified'
+          done(err)
+
+  describe 'with non-2xx response', ->
+    beforeEach ->
+      app.use middleware
+      app.get '/users', (req, res) ->
+        res.set 'Last-Modified', new Date().toUTCString()
+        res.send 404
+
+    it 'does not cache response', (done) ->
+      request(app)
+        .get('/users')
+        .expect(404)
+        .end (err, res) ->
+          expect(guard.store.paths).to.be.empty()
           done(err)
 
   describe 'res.cacheable', ->

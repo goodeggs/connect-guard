@@ -3,7 +3,6 @@ fresh = require 'fresh'
 MemoryStore = require './memory_store'
 
 # Next steps:
-#   only cache 200-300 responses
 #   etag
 #   respect expires in response
 guard = (invalidators...) ->
@@ -25,6 +24,9 @@ guard = (invalidators...) ->
       end = res.end
       res.end = ->
         end.apply res, arguments
+        # 2xx or 304 as per rfc2616 14.26
+        return unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
+
         headers = {}
         for name in ['expires', 'last-modified', 'etag']
           headers[name] = @_headers[name] if @_headers[name]?

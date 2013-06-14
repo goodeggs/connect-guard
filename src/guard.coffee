@@ -3,9 +3,10 @@ fresh = require 'fresh'
 MemoryStore = require './memory_store'
 
 # Next steps:
-#   respect expires in response
-#   respect Cache-Control: max-age in response
-#   cacheable strips cookies
+#   Invalidate cached response based on
+#     expires in response
+#     Cache-Control: max-age in response
+#   cacheable strips cookies to enable proxy caching
 guard = (invalidators...) ->
   return (req, res, next) ->
     return next() unless req.method is 'GET'

@@ -90,25 +90,44 @@ describe 'guard', ->
           done(err)
 
   describe 'with cached response', ->
-    {lastModified} = {}
 
-    beforeEach (done) ->
-      lastModified = new Date().toUTCString()
-      app.use guard()
-      app.get '/users', (req, res) ->
-        res.cacheable {lastModified}
-        res.send 'Users'
-      request(app).get('/users').end(done)
+    describe 'with If-Modified-Since request', ->
+      {lastModified} = {}
+      beforeEach (done) ->
+        lastModified = new Date().toUTCString()
+        app.use guard()
+        app.get '/users', (req, res) ->
+          res.cacheable {lastModified}
+          res.send 'Users'
+        request(app).get('/users').end(done)
 
-    it 'sends 304', (done) ->
-      request(app)
-        .get('/users')
-        .set('If-Modified-Since', lastModified)
-        .expect(304)
-        .expect('Last-Modified', lastModified)
-        .end (err, res) ->
-          expect(res.header['x-connect-guard']).to.be 'hit'
-          done(err)
+      it 'sends 304', (done) ->
+        request(app)
+          .get('/users')
+          .set('If-Modified-Since', lastModified)
+          .expect(304)
+          .expect('Last-Modified', lastModified)
+          .end (err, res) ->
+            expect(res.header['x-connect-guard']).to.be 'hit'
+            done(err)
+
+    describe 'with If-None-Match request', ->
+      {etag} = {}
+      beforeEach (done) ->
+        etag = 'abc'
+        app.use guard()
+        app.get '/users', (req, res) ->
+          res.cacheable {etag}
+          res.send 'Users'
+        request(app).get('/users').end(done)
+
+      it 'sends 304', (done) ->
+        request(app)
+          .get('/users')
+          .set('If-None-Match', etag)
+          .expect(304)
+          .expect('Etag', etag)
+          .end(done)
 
   describe 'with non-2xx response', ->
     beforeEach ->

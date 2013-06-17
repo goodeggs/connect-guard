@@ -16,9 +16,9 @@ guard = (invalidators...) ->
       return next(err) if err?
 
       # 304 if last response is still fresh
-      if fresh(req.headers, cached or {})
+      if fresh(req.headers, cached?.headers or {})
         guard.emit 'hit', req.url, cached
-        res.set cached
+        res.set cached.headers
         res.set 'X-Connect-Guard', 'hit'
         return res.send 304
 
@@ -41,7 +41,7 @@ guard = (invalidators...) ->
         for name in ['expires', 'last-modified', 'etag', 'cache-control']
           headers[name] = @_headers[name] if @_headers[name]?
         if Object.keys(headers).length
-          guard.store.set req.url, headers, (err) ->
+          guard.store.set req.url, {createdAt: new Date(), headers}, (err) ->
             return guard.emit('error', "Error storing headers for path '#{req.url}'", err) if err?
             guard.emit('add', req.url, headers)
             # Register invalidators

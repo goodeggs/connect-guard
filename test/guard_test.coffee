@@ -70,7 +70,8 @@ describe 'guard', ->
         .expect('Last-Modified', lastModified)
         .end (err, res) ->
           expect(guard.store.paths).to.have.key '/users'
-          expect(guard.store.paths['/users']).to.have.key 'last-modified'
+          expect(guard.store.paths['/users']).to.have.key 'createdAt'
+          expect(guard.store.paths['/users'].headers).to.have.key 'last-modified'
           done(err)
 
   describe 'with Etag response header', ->
@@ -89,7 +90,7 @@ describe 'guard', ->
         .expect('Etag', etag)
         .end (err, res) ->
           expect(guard.store.paths).to.have.key '/users'
-          expect(guard.store.paths['/users']).to.have.key 'etag'
+          expect(guard.store.paths['/users'].headers).to.have.key 'etag'
           done(err)
 
   describe 'with cached response', ->
@@ -167,8 +168,8 @@ describe 'guard', ->
           .expect('Last-Modified', lastModified.toUTCString())
           .end (err, res) ->
             expect(guard.store.paths).to.have.key '/users'
-            expect(guard.store.paths['/users']).to.have.key 'last-modified'
-            expect(guard.store.paths['/users']['last-modified']).to.be lastModified.toUTCString()
+            expect(guard.store.paths['/users'].headers).to.have.key 'last-modified'
+            expect(guard.store.paths['/users'].headers['last-modified']).to.be lastModified.toUTCString()
             done(err)
 
     describe 'etag', ->
@@ -186,8 +187,8 @@ describe 'guard', ->
           .expect('Etag', etag)
           .end (err, res) ->
             expect(guard.store.paths).to.have.key '/users'
-            expect(guard.store.paths['/users']).to.have.key 'etag'
-            expect(guard.store.paths['/users']['etag']).to.be etag
+            expect(guard.store.paths['/users'].headers).to.have.key 'etag'
+            expect(guard.store.paths['/users'].headers['etag']).to.be etag
             done(err)
 
   describe 'invalidation', ->

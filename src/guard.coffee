@@ -50,7 +50,7 @@ class Guard extends EventEmitter
         res.cacheable = ({lastModified, etag, maxAge} = {}) ->
           @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?
           @set 'Etag', etag if etag?
-          @set 'Cache-Control', "public, max-age=#{maxAge}" if maxAge?
+          @set 'Cache-Control', "public, max-age=#{maxAge}, must-revalidate" if maxAge?
           delete @_headers['set-cookie']
 
         # Don't cache headers if not a 2xx response

@@ -210,7 +210,7 @@ describe 'guard', ->
         it 'sets Cache-Control header', (done) ->
           requested
             .expect(200)
-            .expect('Cache-Control', 'public, max-age=10', done)
+            .expect('Cache-Control', 'public, max-age=10, must-revalidate', done)
 
       describe 'cookie purging', ->
         beforeEach ->

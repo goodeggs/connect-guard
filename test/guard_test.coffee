@@ -230,21 +230,40 @@ describe 'guard', ->
     describe 'invalidation', ->
       {invalidator} = {}
 
-      beforeEach (done) ->
-        invalidator = new EventEmitter()
-        app.use guard(invalidator)
-        app.get '/users', (req, res) ->
-          res.cacheable lastModified: new Date()
-          res.send 'Users'
-        request(app).get('/users').end (err, res) ->
-          expect(store.paths).to.have.key '/users'
-          done(err)
+      describe 'with an invalidator instance', ->
+        beforeEach (done) ->
+          invalidator = new EventEmitter()
+          app.use guard(invalidator)
+          app.get '/users', (req, res) ->
+            res.cacheable etag: 'abc'
+            res.send 'Users'
+          request(app).get('/users').end (err, res) ->
+            expect(store.paths).to.have.key '/users'
+            done(err)
 
-      it 'removes entry from response store', (done) ->
-        instance.on 'invalidate', ->
-          expect(store.paths).to.not.have.key '/users'
-          done()
-        invalidator.emit 'stale'
+        it 'removes entry from response store', (done) ->
+          instance.on 'invalidate', ->
+            expect(store.paths).to.not.have.key '/users'
+            done()
+          invalidator.emit 'stale'
+
+      describe 'with an invalidator constructor', ->
+        {instance} = {}
+        beforeEach (done) ->
+          invalidator = (req) ->
+            instance = new EventEmitter()
+            instance.id = req.params.id
+            instance
+          app.use guard(invalidator)
+          app.get '/users/:id', (req, res) ->
+            res.cacheable etag: 'abc'
+            res.send 'User 1'
+          request(app).get('/users/1').end (err, res) ->
+            expect(store.paths).to.have.key '/users/1'
+            done(err)
+
+        it 'creates invalidator', ->
+          expect(instance.id).to.be '1'
 
     describe 'expiration', ->
 

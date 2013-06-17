@@ -6,7 +6,6 @@ MemoryStore = require './memory_store'
 # Next steps:
 #   Invalidate cached response based on
 #     expires in response
-#   cacheable strips cookies to enable proxy caching
 class Guard extends EventEmitter
 
   constructor: ({@store}) ->
@@ -71,6 +70,7 @@ class Guard extends EventEmitter
               guard.emit('add', req.url, headers)
               # Register invalidators
               for invalidator in invalidators
+                invalidator = invalidator(req) if typeof invalidator is 'function'
                 invalidator.once 'stale', ->
                   guard.invalidate req.url
 

@@ -212,6 +212,21 @@ describe 'guard', ->
             .expect(200)
             .expect('Cache-Control', 'public, max-age=10', done)
 
+      describe 'cookie purging', ->
+        beforeEach ->
+          app.get '/users', (req, res) ->
+            res.cookie('sessionID', 'abc')
+            res.cacheable(etag: '123')
+            res.send 'Users'
+          requested = request(app).get('/users')
+
+        it 'deletes cookie from response', (done) ->
+          requested
+            .expect(200)
+            .end (err, res) ->
+              expect(res.headers['set-cookie']).to.be undefined
+              done(err)
+
     describe 'invalidation', ->
       {invalidator} = {}
 

@@ -1,11 +1,11 @@
 {EventEmitter} = require('events')
 fresh = require 'fresh'
+{parseCacheControl} = require 'connect/lib/utils'
 MemoryStore = require './memory_store'
 
 # Next steps:
 #   Invalidate cached response based on
 #     expires in response
-#     Cache-Control: max-age in response
 #   cacheable strips cookies to enable proxy caching
 class Guard extends EventEmitter
 
@@ -18,6 +18,12 @@ class Guard extends EventEmitter
       @emit 'invalidate', path, cached
       callback(err, cached) if callback?
 
+  expired: (res) ->
+    return false unless res?.headers['cache-control']?
+    cacheControl = parseCacheControl res?.headers['cache-control']
+    expiresAt = (maxAge = cacheControl['max-age'])? and (res.createdAt.valueOf() + maxAge * 1000)
+    expiresAt < Date.now()
+
   middleware: (invalidators...) =>
     guard = @
     return (req, res, next) ->
@@ -27,8 +33,13 @@ class Guard extends EventEmitter
       guard.store.get req.url, (err, cached) ->
         return next(err) if err?
 
+        # Invalidate if expired
+        if cached? and guard.expired(cached)
+          delete req.headers[name] for name in ['if-modified', 'if-none-match']
+          guard.invalidate req.url, (err) ->
+            guard.emit('error', "Error expiring headers for path '#{req.url}'", err) if err?
         # 304 if last response is still fresh
-        if fresh(req.headers, cached?.headers or {})
+        else if fresh(req.headers, cached?.headers or {})
           guard.emit 'hit', req.url, cached
           res.set cached.headers
           res.set 'X-Connect-Guard', 'hit'
@@ -37,9 +48,10 @@ class Guard extends EventEmitter
         guard.emit 'miss', req.url, cached
         res.set 'X-Connect-Guard', 'miss'
 
-        res.cacheable = ({lastModified, etag} = {}) ->
+        res.cacheable = ({lastModified, etag, maxAge} = {}) ->
           @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?
           @set 'Etag', etag if etag?
+          @set 'Cache-Control', "public, max-age=#{maxAge}" if maxAge?
 
         # Don't cache headers if not a 2xx response
         end = res.end
@@ -66,6 +78,5 @@ class Guard extends EventEmitter
 instance = new Guard(store: new MemoryStore())
 module.exports = guard = instance.middleware
 guard.instance = instance
-guard.store = instance.store
 guard.Guard = Guard
 guard.MemoryStore = MemoryStore

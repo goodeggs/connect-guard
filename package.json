@@ -18,7 +18,8 @@
     "varnish"
   ],
   "dependencies": {
-    "fresh": "*"
+    "fresh": "*",
+    "connect": "*"
   },
   "devDependencies": {
     "express": "*",

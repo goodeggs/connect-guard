@@ -11,7 +11,6 @@ describe 'guard', ->
 
     it 'exposes instance and constructors', ->
       expect(connectGuard.instance).to.be.ok()
-      expect(connectGuard.store).to.be.ok()
       expect(connectGuard.MemoryStore).to.be.ok()
       expect(connectGuard.Guard).to.be.ok()
 
@@ -201,6 +200,18 @@ describe 'guard', ->
               expect(store.paths['/users'].headers['etag']).to.be etag
               done(err)
 
+      describe 'maxAge', ->
+        beforeEach ->
+          app.get '/users', (req, res) ->
+            res.cacheable {maxAge: 10}
+            res.send 'Users'
+          requested = request(app).get('/users')
+
+        it 'sets Cache-Control header', (done) ->
+          requested
+            .expect(200)
+            .expect('Cache-Control', 'public, max-age=10', done)
+
     describe 'invalidation', ->
       {invalidator} = {}
 
@@ -219,3 +230,36 @@ describe 'guard', ->
           expect(store.paths).to.not.have.key '/users'
           done()
         invalidator.emit 'stale'
+
+    describe 'expiration', ->
+
+      describe 'with max-age header', ->
+        {etag} = {}
+        beforeEach (done) ->
+          etag = '123'
+          app.use guard()
+          app.get '/users', (req, res) ->
+            res.set 'Etag', etag
+            res.set 'Cache-Control', 'public, max-age=10'
+            res.send 'Users'
+          request(app).get('/users').end(done)
+
+        it 'hits cache', (done) ->
+          request(app)
+            .get('/users')
+            .set('If-None-Match', etag)
+            .expect(304, done)
+
+        describe 'after 10 seconds', ->
+          beforeEach ->
+            oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
+            store.paths['/users'].createdAt = oneMinuteEarlier
+
+          it 'misses cache', (done) ->
+            request(app)
+              .get('/users')
+              .set('If-None-Match', etag)
+              .expect(200)
+              .end (err, res) ->
+                expect(res.header['x-connect-guard']).to.be 'miss'
+                done(err)

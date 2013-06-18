@@ -20,7 +20,8 @@ class Guard extends EventEmitter
   expired: (res) ->
     return false unless res?.headers['cache-control']?
     cacheControl = parseCacheControl res?.headers['cache-control']
-    expiresAt = (maxAge = cacheControl['max-age'])? and (res.createdAt.valueOf() + maxAge * 1000)
+    return false unless (maxAge = cacheControl['max-age'])?
+    expiresAt = res.createdAt.valueOf() + maxAge * 1000
     expiresAt < Date.now()
 
   middleware: (invalidators...) =>

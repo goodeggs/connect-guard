@@ -260,6 +260,64 @@ describe 'guard', ->
                 expect(res.header['x-connect-guard']).to.be 'miss'
                 done(err)
 
+      describe 'with maxAge param', ->
+        {etag} = {}
+        beforeEach (done) ->
+          etag = '123'
+          app.use guard(maxAge: 10)
+          app.get '/users', (req, res) ->
+            res.set 'Etag', etag
+            res.send 'Users'
+          request(app).get('/users').end(done)
+
+        it 'hits cache', (done) ->
+          request(app)
+            .get('/users')
+            .set('If-None-Match', etag)
+            .expect(304, done)
+
+        describe 'after 10 seconds', ->
+          beforeEach ->
+            oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
+            store.paths['/users'].createdAt = oneMinuteEarlier
+
+          it 'misses cache', (done) ->
+            request(app)
+              .get('/users')
+              .set('If-None-Match', etag)
+              .expect(200)
+              .end (err, res) ->
+                expect(res.header['x-connect-guard']).to.be 'miss'
+                done(err)
+
+
+      describe 'with maxAge param and expireMaxAge', ->
+        {etag} = {}
+        beforeEach (done) ->
+          etag = '123'
+          app.use guard(maxAge: 10, expireMaxAge: false)
+          app.get '/users', (req, res) ->
+            res.set 'Etag', etag
+            res.send 'Users'
+          request(app).get('/users').end(done)
+
+        it 'hits cache', (done) ->
+          request(app)
+            .get('/users')
+            .set('If-None-Match', etag)
+            .expect(304, done)
+
+        describe 'after 10 seconds', ->
+          beforeEach ->
+            oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
+            store.paths['/users'].createdAt = oneMinuteEarlier
+
+          it 'hits cache', (done) ->
+            request(app)
+              .get('/users')
+              .set('If-None-Match', etag)
+              .expect(304, done)
+
       describe 'with max-age header', ->
         {etag} = {}
         beforeEach (done) ->

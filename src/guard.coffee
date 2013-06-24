@@ -25,6 +25,8 @@ class Guard extends EventEmitter
     expiresAt < Date.now()
 
   middleware: (options={}) =>
+    options.expireMaxAge ?= true # Expire our header cache based on max-age
+
     guard = @
     return (req, res, next) ->
       return next() unless req.method is 'GET'
@@ -33,8 +35,8 @@ class Guard extends EventEmitter
       guard.store.get req.url, (err, cached) ->
         return next(err) if err?
 
-        # Invalidate if expired
-        if cached? and guard.expired(cached)
+        # Invalidate if checking maxAge and expired
+        if cached? and options.expireMaxAge and guard.expired(cached)
           delete req.headers[name] for name in ['if-modified', 'if-none-match']
           guard.invalidate req.url, (err) ->
             guard.emit('error', "Error expiring headers for path '#{req.url}'", err) if err?

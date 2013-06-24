@@ -1,4 +1,5 @@
 expect = require 'expect.js'
+require 'coffee-errors'
 express = require 'express'
 request = require 'supertest'
 {EventEmitter} = require 'events'
@@ -227,45 +228,37 @@ describe 'guard', ->
               expect(res.headers['set-cookie']).to.be undefined
               done(err)
 
-    describe 'invalidation', ->
-      {invalidator} = {}
-
-      describe 'with an invalidator instance', ->
-        beforeEach (done) ->
-          invalidator = new EventEmitter()
-          app.use guard(invalidator)
-          app.get '/users', (req, res) ->
-            res.cacheable etag: 'abc'
-            res.send 'Users'
-          request(app).get('/users').end (err, res) ->
-            expect(store.paths).to.have.key '/users'
-            done(err)
-
-        it 'removes entry from response store', (done) ->
-          instance.on 'invalidate', ->
-            expect(store.paths).to.not.have.key '/users'
-            done()
-          invalidator.emit 'stale'
-
-      describe 'with an invalidator constructor', ->
-        {instance} = {}
-        beforeEach (done) ->
-          invalidator = (req) ->
-            instance = new EventEmitter()
-            instance.id = req.params.id
-            instance
-          app.use guard(invalidator)
-          app.get '/users/:id', (req, res) ->
-            res.cacheable etag: 'abc'
-            res.send 'User 1'
-          request(app).get('/users/1').end (err, res) ->
-            expect(store.paths).to.have.key '/users/1'
-            done(err)
-
-        it 'creates invalidator', ->
-          expect(instance.id).to.be '1'
-
     describe 'expiration', ->
+
+      describe 'with maxAge param', ->
+        {etag} = {}
+        beforeEach (done) ->
+          etag = '123'
+          app.use guard(maxAge: 10)
+          app.get '/users', (req, res) ->
+            res.set 'Etag', etag
+            res.send 'Users'
+          request(app).get('/users').end(done)
+
+        it 'hits cache', (done) ->
+          request(app)
+            .get('/users')
+            .set('If-None-Match', etag)
+            .expect(304, done)
+
+        describe 'after 10 seconds', ->
+          beforeEach ->
+            oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
+            store.paths['/users'].createdAt = oneMinuteEarlier
+
+          it 'misses cache', (done) ->
+            request(app)
+              .get('/users')
+              .set('If-None-Match', etag)
+              .expect(200)
+              .end (err, res) ->
+                expect(res.header['x-connect-guard']).to.be 'miss'
+                done(err)
 
       describe 'with max-age header', ->
         {etag} = {}

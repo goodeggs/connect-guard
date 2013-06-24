@@ -25,6 +25,7 @@
     "express": "*",
     "supertest": "*",
     "coffee-script": "*",
+    "coffee-errors": "*",
     "mocha": "*",
     "expect.js": "*"
   },

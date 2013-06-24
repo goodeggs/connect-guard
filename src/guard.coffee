@@ -24,7 +24,7 @@ class Guard extends EventEmitter
     expiresAt = res.createdAt.valueOf() + maxAge * 1000
     expiresAt < Date.now()
 
-  middleware: (invalidators...) =>
+  middleware: (options={}) =>
     guard = @
     return (req, res, next) ->
       return next() unless req.method is 'GET'
@@ -54,6 +54,8 @@ class Guard extends EventEmitter
           @set 'Cache-Control', "public, max-age=#{maxAge}, must-revalidate" if maxAge?
           delete @_headers['set-cookie']
 
+        res.cacheable {maxAge: options.maxAge} if options.maxAge?
+
         # Don't cache headers if not a 2xx response
         end = res.end
         res.end = ->
@@ -69,11 +71,6 @@ class Guard extends EventEmitter
             guard.store.set req.url, {createdAt: new Date(), headers}, (err) ->
               return guard.emit('error', "Error storing headers for path '#{req.url}'", err) if err?
               guard.emit('add', req.url, headers)
-              # Register invalidators
-              for invalidator in invalidators
-                invalidator = invalidator(req) if typeof invalidator is 'function'
-                invalidator.once 'stale', ->
-                  guard.invalidate req.url
 
         next()
 

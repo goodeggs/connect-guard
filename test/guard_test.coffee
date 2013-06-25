@@ -6,12 +6,11 @@ request = require 'supertest'
 {Guard, MemoryStore} = connectGuard = require '../'
 
 describe 'guard', ->
-  describe 'exported function', ->
-    it 'is a function', ->
-      expect(connectGuard).to.be.a Function
+  describe 'exported value', ->
+    it 'is a Guard instance', ->
+      expect(connectGuard).to.be.a Guard
 
     it 'exposes instance and constructors', ->
-      expect(connectGuard.instance).to.be.ok()
       expect(connectGuard.MemoryStore).to.be.ok()
       expect(connectGuard.Guard).to.be.ok()
 

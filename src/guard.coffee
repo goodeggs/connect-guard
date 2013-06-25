@@ -80,8 +80,6 @@ class Guard extends EventEmitter
 
         next()
 
-instance = new Guard(store: new MemoryStore())
-module.exports = guard = instance.middleware
-guard.instance = instance
+module.exports = guard = new Guard(store: new MemoryStore())
 guard.Guard = Guard
 guard.MemoryStore = MemoryStore

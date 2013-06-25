@@ -8,9 +8,13 @@ MemoryStore = require './memory_store'
 #     expires in response
 class Guard extends EventEmitter
 
-  constructor: ({@store}) ->
-    @store ?= new MemoryStore()
+  constructor: ({store}={}) ->
+    @configure store: store or new MemoryStore()
     @setMaxListeners 0
+
+  configure: ({store}={}) ->
+    @store = store if store?
+    @
 
   invalidate: (path, callback) ->
     @store.delete path, (err, cached) =>

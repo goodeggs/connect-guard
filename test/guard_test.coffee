@@ -247,7 +247,7 @@ describe 'guard', ->
               .set('If-None-Match', etag)
               .expect(304, done)
 
-          describe 'after 10 seconds', ->
+          describe 'after 1 minute', ->
             beforeEach ->
               oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
               store.paths['/users'].createdAt = oneMinuteEarlier
@@ -277,7 +277,7 @@ describe 'guard', ->
               .set('If-None-Match', etag)
               .expect(304, done)
 
-          describe 'after 10 seconds', ->
+          describe 'after 1 minute', ->
             beforeEach ->
               oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
               store.paths['/users'].createdAt = oneMinuteEarlier
@@ -292,11 +292,11 @@ describe 'guard', ->
                   done(err)
 
 
-        describe 'with maxAge param and expireMaxAge', ->
+        describe 'with ttl', ->
           {etag} = {}
           beforeEach (done) ->
             etag = '123'
-            app.use guard(maxAge: 10, expireMaxAge: false)
+            app.use guard(maxAge: 10, ttl: 60)
             app.get '/users', (req, res) ->
               res.set 'Etag', etag
               res.send 'Users'
@@ -308,10 +308,10 @@ describe 'guard', ->
               .set('If-None-Match', etag)
               .expect(304, done)
 
-          describe 'after 10 seconds', ->
+          describe 'after 20 seconds', ->
             beforeEach ->
-              oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
-              store.paths['/users'].createdAt = oneMinuteEarlier
+              twentySecEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 20 * 1000)
+              store.paths['/users'].createdAt = twentySecEarlier
 
             it 'hits cache', (done) ->
               request(app)
@@ -336,7 +336,7 @@ describe 'guard', ->
               .set('If-None-Match', etag)
               .expect(304, done)
 
-          describe 'after 10 seconds', ->
+          describe 'after 1 minute', ->
             beforeEach ->
               oneMinuteEarlier = new Date(store.paths['/users'].createdAt.valueOf() - 60 * 1000)
               store.paths['/users'].createdAt = oneMinuteEarlier

@@ -21,7 +21,12 @@ class Guard extends EventEmitter
       @emit 'invalidate', path, cached
       callback(err, cached) if callback?
 
-  expired: (res) ->
+  expired: (res, ttl) ->
+    # Explicitly set, expire on ttl
+    if ttl >=0
+      expiresAt = res.createdAt.valueOf() + ttl * 1000
+      return expiresAt < Date.now()
+    # Otherwase use max-age
     return false unless res?.headers['cache-control']?
     cacheControl = parseCacheControl res?.headers['cache-control']
     return false unless (maxAge = cacheControl['max-age'])?
@@ -29,7 +34,7 @@ class Guard extends EventEmitter
     expiresAt < Date.now()
 
   middleware: (options={}) =>
-    options.expireMaxAge ?= true # Expire our header cache based on max-age
+    ttl = options.ttl or options.maxAge or -1 # When to expire our header cache, or based on cached max-age (-1)
 
     guard = @
     return (req, res, next) ->
@@ -40,7 +45,7 @@ class Guard extends EventEmitter
         return next(err) if err?
 
         # Invalidate if checking maxAge and expired
-        if cached? and options.expireMaxAge and guard.expired(cached)
+        if cached? and guard.expired(cached, ttl)
           delete req.headers[name] for name in ['if-modified', 'if-none-match']
           guard.invalidate req.url, (err) ->
             guard.emit('error', "Error expiring headers for path '#{req.url}'", err) if err?

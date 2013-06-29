@@ -67,9 +67,9 @@ class Guard extends EventEmitter
 
         res.cacheable {maxAge: options.maxAge} if options.maxAge?
 
-        # Don't cache headers if not a 2xx response
         end = res.end
         res.end = ->
+          # Don't cache headers if not a 2xx response
           # 2xx or 304 as per rfc2616 14.26
           unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
             return end.apply res, arguments

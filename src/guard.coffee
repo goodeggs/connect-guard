@@ -70,13 +70,20 @@ class Guard extends EventEmitter
         # Don't cache headers if not a 2xx response
         end = res.end
         res.end = ->
-          end.apply res, arguments
           # 2xx or 304 as per rfc2616 14.26
-          return unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
+          unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
+            return end.apply res, arguments
 
-          # Cache headers
+          # Set last-modified if no etag/last-modified header present
+          unless @_headers['last-modified']? or @_headers['etag']?
+            @cacheable lastModified: cached?.headers['last-modified'] or Date.now()
+
+          # Send response
+          end.apply res, arguments
+
+          # Cache response headers
           headers = {}
-          for name in ['expires', 'last-modified', 'etag', 'cache-control']
+          for name in ['last-modified', 'etag', 'cache-control']
             headers[name] = @_headers[name] if @_headers[name]?
           if Object.keys(headers).length
             guard.store.set req.url, {createdAt: new Date(), headers}, (err) ->

@@ -24,22 +24,12 @@ describe 'guard', ->
 
     describe '::middleware', ->
 
-      describe 'with no cache headers in response', ->
+      describe 'cacheable response helper', ->
         beforeEach ->
           app.use guard()
           app.get '/users', (req, res) ->
             expressResponse = res
             res.send 'Users'
-
-        it 'passes request through middleware chain', (done) ->
-          request(app)
-            .get('/users')
-            .expect(200, 'Users')
-            .expect('X-Connect-Guard', 'miss')
-            .end (err, res) ->
-              expect(res.header['x-connect-guard']).to.be 'miss'
-              expect(store.paths).to.be.empty()
-              done(err)
 
         it 'mixes cacheable into response', (done) ->
           request(app)
@@ -103,6 +93,37 @@ describe 'guard', ->
               expect(store.paths).to.have.key '/users'
               expect(store.paths['/users'].headers).to.have.key 'etag'
               done(err)
+
+      describe 'with no cache headers in response', ->
+        {requested} = {}
+        beforeEach ->
+          app.use guard()
+          app.get '/users', (req, res) ->
+            res.send 'Users'
+          requested = request(app).get('/users').expect(200, 'Users')
+
+        it 'adds last-modified header to the response', (done) ->
+          requested.end (err, res) ->
+            expect(res.headers['last-modified']).to.be.ok()
+            done(err)
+
+        it 'sends 304 for next request', (done) ->
+          requested.end (err, res) ->
+            lastModified = res.headers['last-modified']
+            request(app)
+              .get('/users')
+              .set('If-Modified-Since', lastModified)
+              .expect(304, done)
+
+        it 'sends same last-modified value for next stale request 1 minute later', (done) ->
+          requested.end (err, res) ->
+            lastModified = new Date(new Date(res.headers['last-modified'].valueOf() - 60*1000)).toUTCString()
+            store.paths['/users'].headers['last-modified'] = lastModified
+            request(app)
+              .get('/users')
+              .expect 200, 'Users', (err, res) ->
+                expect(res.headers['last-modified']).to.be lastModified
+                done(err)
 
       describe 'with cached response', ->
 

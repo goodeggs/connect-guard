@@ -95,12 +95,18 @@ describe 'guard', ->
               done(err)
 
       describe 'with no cache headers in response', ->
-        {requested} = {}
+        {requested, longBody} = {}
         beforeEach ->
+          longBody = 'Users' + (i for i in [0..1000])
           app.use guard()
           app.get '/users', (req, res) ->
-            res.send 'Users'
-          requested = request(app).get('/users').expect(200, 'Users')
+            res.send longBody
+          requested = request(app).get('/users').expect(200, longBody)
+
+        it 'has etag added by express (for responses over 1024 bytes)', (done) ->
+          requested.end (err, res) ->
+            expect(res.headers['etag']).to.be.ok()
+            done(err)
 
         it 'adds last-modified header to the response', (done) ->
           requested.end (err, res) ->
@@ -121,7 +127,7 @@ describe 'guard', ->
             store.paths['/users'].headers['last-modified'] = lastModified
             request(app)
               .get('/users')
-              .expect 200, 'Users', (err, res) ->
+              .expect 200, longBody, (err, res) ->
                 expect(res.headers['last-modified']).to.be lastModified
                 done(err)
 

@@ -67,6 +67,14 @@ class Guard extends EventEmitter
 
         res.cacheable {maxAge: options.maxAge} if options.maxAge?
 
+        # Monkey patch send to see if Express added etag
+        expressAddedEtag = false
+        send = res.send
+        res.send = ->
+          etagBeforeSend = @get('Etag')
+          send.apply res, arguments
+          expressAddedEtag = @get('Etag') isnt etagBeforeSend
+
         end = res.end
         res.end = ->
           # Don't cache headers if not a 2xx response
@@ -75,7 +83,7 @@ class Guard extends EventEmitter
             return end.apply res, arguments
 
           # Set last-modified if no etag/last-modified header present
-          unless @_headers['last-modified']? or @_headers['etag']?
+          unless @_headers['last-modified']? or (@_headers['etag']? and expressAddedEtag)
             @cacheable lastModified: cached?.headers['last-modified'] or Date.now()
 
           # Send response

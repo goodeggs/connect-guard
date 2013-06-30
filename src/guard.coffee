@@ -21,17 +21,23 @@ class Guard extends EventEmitter
       @emit 'invalidate', path, cached
       callback(err, cached) if callback?
 
-  expired: (res, ttl) ->
+  expired: (cacheEntry, ttl) ->
     # Explicitly set, expire on ttl
     if ttl >=0
-      expiresAt = res.createdAt.valueOf() + ttl * 1000
+      expiresAt = cacheEntry.createdAt.valueOf() + ttl * 1000
       return expiresAt < Date.now()
-    # Otherwase use max-age
-    return false unless res?.headers['cache-control']?
-    cacheControl = parseCacheControl res?.headers['cache-control']
+    # Otherwise use max-age
+    return false unless cacheEntry.headers['Cache-Control']?
+    cacheControl = parseCacheControl cacheEntry.headers['Cache-Control']
     return false unless (maxAge = cacheControl['max-age'])?
-    expiresAt = res.createdAt.valueOf() + maxAge * 1000
+    expiresAt = cacheEntry.createdAt.valueOf() + maxAge * 1000
     expiresAt < Date.now()
+
+  fresh: (requestHeaders, cachedHeaders) ->
+    cached = {}
+    for key, value of cachedHeaders
+      cached[key.toLowerCase()] = value
+    fresh(requestHeaders, cached)
 
   middleware: (options={}) =>
     ttl = options.ttl or options.maxAge or -1 # When to expire our header cache, or based on cached max-age (-1)
@@ -39,6 +45,13 @@ class Guard extends EventEmitter
     guard = @
     return (req, res, next) ->
       return next() unless req.method is 'GET'
+
+      # Define cacheable response helper
+      res.cacheable = ({lastModified, etag, maxAge} = {}) ->
+        @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?
+        @set 'Etag', etag if etag?
+        @set 'Cache-Control', "public, max-age=#{maxAge}, must-revalidate" if maxAge?
+        delete @_headers['set-cookie'] # Clear cookies so response is cacheable downstream
 
       # Check response cache
       guard.store.get req.url, (err, cached) ->
@@ -50,7 +63,7 @@ class Guard extends EventEmitter
           guard.invalidate req.url, (err) ->
             guard.emit('error', "Error expiring headers for path '#{req.url}'", err) if err?
         # 304 if last response is still fresh
-        else if fresh(req.headers, cached?.headers or {})
+        else if cached? and guard.fresh(req.headers, cached.headers)
           guard.emit 'hit', req.url, cached
           res.set cached.headers
           res.set 'X-Connect-Guard', 'hit'
@@ -59,15 +72,9 @@ class Guard extends EventEmitter
         guard.emit 'miss', req.url, cached
         res.set 'X-Connect-Guard', 'miss'
 
-        res.cacheable = ({lastModified, etag, maxAge} = {}) ->
-          @set 'Last-Modified', new Date(lastModified).toUTCString() if lastModified?
-          @set 'Etag', etag if etag?
-          @set 'Cache-Control', "public, max-age=#{maxAge}, must-revalidate" if maxAge?
-          delete @_headers['set-cookie']
-
         res.cacheable {maxAge: options.maxAge} if options.maxAge?
 
-        # Monkey patch send to see if Express added etag
+        # Monkey patch res.send to remove Express-added Etag as it interferes with default Last-Modified behavior
         expressAddedEtag = false
         send = res.send
         res.send = ->
@@ -75,6 +82,7 @@ class Guard extends EventEmitter
           send.apply res, arguments
           expressAddedEtag = @get('Etag') isnt etagBeforeSend
 
+        # Monkey patch res.end to store cache headers
         end = res.end
         res.end = ->
           # Don't cache headers if not a 2xx response
@@ -82,17 +90,17 @@ class Guard extends EventEmitter
           unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
             return end.apply res, arguments
 
-          # Set last-modified if no etag/last-modified header present
-          unless @_headers['last-modified']? or (@_headers['etag']? and expressAddedEtag)
-            @cacheable lastModified: cached?.headers['last-modified'] or Date.now()
+          # Set Last-Modified if no Etag/Last-Modified header present
+          unless @get('Last-Modified')? or (@get('Etag')? and expressAddedEtag)
+            @cacheable lastModified: cached?.headers['Last-Modified'] or Date.now()
 
           # Send response
           end.apply res, arguments
 
           # Cache response headers
           headers = {}
-          for name in ['last-modified', 'etag', 'cache-control']
-            headers[name] = @_headers[name] if @_headers[name]?
+          for name in ['Last-Modified', 'Etag', 'Cache-Control']
+            headers[name] = @get(name) if @get(name)?
           if Object.keys(headers).length
             guard.store.set req.url, {createdAt: new Date(), headers}, (err) ->
               return guard.emit('error', "Error storing headers for path '#{req.url}'", err) if err?

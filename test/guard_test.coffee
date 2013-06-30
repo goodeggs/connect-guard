@@ -72,7 +72,7 @@ describe 'guard', ->
             .end (err, res) ->
               expect(store.paths).to.have.key '/users'
               expect(store.paths['/users']).to.have.key 'createdAt'
-              expect(store.paths['/users'].headers).to.have.key 'last-modified'
+              expect(store.paths['/users'].headers).to.have.key 'Last-Modified'
               done(err)
 
       describe 'with Etag response header', ->
@@ -91,7 +91,7 @@ describe 'guard', ->
             .expect('Etag', etag)
             .end (err, res) ->
               expect(store.paths).to.have.key '/users'
-              expect(store.paths['/users'].headers).to.have.key 'etag'
+              expect(store.paths['/users'].headers).to.have.key 'Etag'
               done(err)
 
       describe 'with no cache headers in response', ->
@@ -116,20 +116,22 @@ describe 'guard', ->
         it 'sends 304 for next request', (done) ->
           requested.end (err, res) ->
             lastModified = res.headers['last-modified']
+            expressEtag = res.headers['etag']
             request(app)
               .get('/users')
               .set('If-Modified-Since', lastModified)
-              .expect(304, done)
+              .set('If-None-Match', expressEtag)
+              .expect 304, (err, res) ->
+                done(err)
 
         it 'sends same last-modified value for next stale request 1 minute later', (done) ->
           requested.end (err, res) ->
             lastModified = new Date(new Date(res.headers['last-modified'].valueOf() - 60*1000)).toUTCString()
-            store.paths['/users'].headers['last-modified'] = lastModified
+            store.paths['/users'].headers['Last-Modified'] = lastModified
             request(app)
               .get('/users')
-              .expect 200, longBody, (err, res) ->
-                expect(res.headers['last-modified']).to.be lastModified
-                done(err)
+              .expect(200, longBody)
+              .expect('Last-Modified', lastModified, done)
 
       describe 'with cached response', ->
 
@@ -206,8 +208,8 @@ describe 'guard', ->
               .expect('Last-Modified', lastModified.toUTCString())
               .end (err, res) ->
                 expect(store.paths).to.have.key '/users'
-                expect(store.paths['/users'].headers).to.have.key 'last-modified'
-                expect(store.paths['/users'].headers['last-modified']).to.be lastModified.toUTCString()
+                expect(store.paths['/users'].headers).to.have.key 'Last-Modified'
+                expect(store.paths['/users'].headers['Last-Modified']).to.be lastModified.toUTCString()
                 done(err)
 
         describe 'etag', ->
@@ -225,8 +227,8 @@ describe 'guard', ->
               .expect('Etag', etag)
               .end (err, res) ->
                 expect(store.paths).to.have.key '/users'
-                expect(store.paths['/users'].headers).to.have.key 'etag'
-                expect(store.paths['/users'].headers['etag']).to.be etag
+                expect(store.paths['/users'].headers).to.have.key 'Etag'
+                expect(store.paths['/users'].headers['Etag']).to.be etag
                 done(err)
 
         describe 'maxAge', ->

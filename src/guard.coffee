@@ -53,23 +53,26 @@ class Guard extends EventEmitter
         @set 'Cache-Control', "public, max-age=#{maxAge}, must-revalidate" if maxAge?
         delete @_headers['set-cookie'] # Clear cookies so response is cacheable downstream
 
+      # If in mounted app, we need to use req.originalUrl
+      url = req.originalUrl or req.url
+
       # Check response cache
-      guard.store.get req.url, (err, cached) ->
+      guard.store.get url, (err, cached) ->
         return next(err) if err?
 
         # Invalidate if checking maxAge and expired
         if cached? and guard.expired(cached, ttl)
           delete req.headers[name] for name in ['if-modified', 'if-none-match']
-          guard.invalidate req.url, (err) ->
-            guard.emit('error', "Error expiring headers for path '#{req.url}'", err) if err?
+          guard.invalidate url, (err) ->
+            guard.emit('error', "Error expiring headers for path '#{url}'", err) if err?
         # 304 if last response is still fresh
         else if cached? and guard.fresh(req.headers, cached.headers)
-          guard.emit 'hit', req.url, cached
+          guard.emit 'hit', url, cached
           res.set cached.headers
           res.set 'X-Connect-Guard', 'hit'
           return res.send 304
 
-        guard.emit 'miss', req.url, cached
+        guard.emit 'miss', url, cached
         res.set 'X-Connect-Guard', 'miss'
 
         res.cacheable {maxAge: options.maxAge} if options.maxAge?
@@ -102,9 +105,9 @@ class Guard extends EventEmitter
           for name in ['Last-Modified', 'Etag', 'Cache-Control']
             headers[name] = @get(name) if @get(name)?
           if Object.keys(headers).length
-            guard.store.set req.url, {createdAt: new Date(), headers}, (err) ->
-              return guard.emit('error', "Error storing headers for path '#{req.url}'", err) if err?
-              guard.emit('add', req.url, headers)
+            guard.store.set url, {createdAt: new Date(), headers}, (err) ->
+              return guard.emit('error', "Error storing headers for path '#{url}'", err) if err?
+              guard.emit('add', url, headers)
 
         next()
 

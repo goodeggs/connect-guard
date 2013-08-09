@@ -85,20 +85,18 @@ class Guard extends EventEmitter
           send.apply res, arguments
           expressAddedEtag = @get('Etag') isnt etagBeforeSend
 
-        # Monkey patch res.end to store cache headers
-        end = res.end
-        res.end = ->
+        # Just before headers are written
+        res.on 'header', ->
           # Don't cache headers if not a 2xx response
           # 2xx or 304 as per rfc2616 14.26
-          unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
-            return end.apply res, arguments
+          return unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
 
           # Set Last-Modified if no Etag/Last-Modified header present
           unless @get('Last-Modified')? or (@get('Etag')? and expressAddedEtag)
             @cacheable lastModified: cached?.headers['Last-Modified'] or Date.now()
-
-          # Send response
-          end.apply res, arguments
+          # Otherwise just clean up response
+          else
+            @cacheable()
 
           # Cache response headers
           headers = {}

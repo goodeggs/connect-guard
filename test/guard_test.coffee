@@ -75,6 +75,22 @@ describe 'guard', ->
               expect(store.paths['/users'].headers).to.have.key 'Last-Modified'
               done(err)
 
+      describe 'with cookie in response', ->
+        beforeEach ->
+          app.use guard(maxAge: 60)
+          app.get '/users', (req, res) ->
+            res.set 'Set-Cookie', 'foo'
+            res.send 'Users'
+
+        it 'clears cookie headers', (done) ->
+          request(app)
+            .get('/users')
+            .expect(200, 'Users')
+            .end (err, res) ->
+              expect(res.headers['set-cookie']).to.be undefined
+              expect(res.headers['last-modified']).to.be.ok()
+              done(err)
+
       describe 'with Etag response header', ->
         {etag} = {}
         beforeEach ->

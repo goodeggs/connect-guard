@@ -110,6 +110,48 @@ describe 'guard', ->
               expect(store.paths['/users'].headers).to.have.key 'Etag'
               done(err)
 
+      describe 'with cached response with Vary header', ->
+        lastModified = new Date().toUTCString()
+
+        beforeEach (done) ->
+          app.use guard()
+          app.get '/users', (req, res) ->
+            res.cacheable {lastModified}
+            res.set 'Vary', 'User-Agent'
+            res.send "Users for #{req.header 'User-Agent'}"
+
+          request(app)
+            .get('/users')
+            .set('User-Agent', 'chrome')
+            .expect(200, 'Users for chrome')
+            .expect('X-Connect-Guard', 'miss', done)
+
+        describe 'a request with the same values for varied headers', ->
+          {requested} = {}
+          beforeEach ->
+            requested = request(app)
+              .get('/users')
+              .set('If-Modified-Since', lastModified)
+              .set('User-Agent', 'chrome')
+
+          it 'hits the cache', (done) ->
+            requested
+              .expect('X-Connect-Guard', 'hit')
+              .expect(304, done)
+
+        describe 'a request with different values for varied headers', ->
+          {requested} = {}
+          beforeEach ->
+            requested = request(app)
+              .get('/users')
+              .set('If-Modified-Since', lastModified)
+              .set('User-Agent', 'iOS')
+
+          it 'warms the cache for the new header values', (done) ->
+            requested
+              .expect('X-Connect-Guard', 'miss')
+              .expect(200, 'Users for iOS', done)
+
       describe 'with no cache headers in response', ->
         {requested, longBody} = {}
         beforeEach ->

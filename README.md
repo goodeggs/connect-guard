@@ -1,5 +1,5 @@
-Guard [![Build Status](https://travis-ci.org/goodeggs/connect-guard.png)](https://travis-ci.org/goodeggs/connect-guard)
-------------
+Guard [![NPM version](https://badge.fury.io/js/connect-guard.png)](http://badge.fury.io/js/connect-guard) [![Build Status](https://travis-ci.org/goodeggs/connect-guard.png)](https://travis-ci.org/goodeggs/connect-guard)
+============
 
 Guard is connect middleware that short circuits request handling if it can send a 304 Not Modified response.
 Intended to be used with reverse proxies like Varnish.

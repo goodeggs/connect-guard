@@ -115,7 +115,7 @@ class Guard extends EventEmitter
           for name in ['Last-Modified', 'Etag', 'Cache-Control']
             headers[name] = @get(name) if @get(name)?
           if Object.keys(headers).length
-            guard.store.set key, {createdAt: new Date(), headers}, (err) ->
+            guard.store.set key, {createdAt: Date.now(), headers}, (err) ->
               return guard.emit('error', "Error storing headers for '#{JSON.stringify key}'", err) if err?
               guard.emit('add', key, headers)
 

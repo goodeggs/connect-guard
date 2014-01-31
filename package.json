@@ -24,7 +24,7 @@
   "devDependencies": {
     "express": "*",
     "supertest": "*",
-    "coffee-script": "*",
+    "coffee-script": ">=1.7.1",
     "coffee-errors": "*",
     "mocha": "*",
     "expect.js": "*"

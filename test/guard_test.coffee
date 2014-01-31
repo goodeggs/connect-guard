@@ -113,14 +113,20 @@ describe 'guard', ->
               done(err)
 
       describe 'with cached response with Vary header', ->
-        lastModified = new Date().toUTCString()
+        lastModified =
+          chrome: new Date(new Date().valueOf() - 1000 * 60 * 60).toUTCString()
+          iOS:    new Date().toUTCString()
 
         beforeEach (done) ->
-          app.use guard()
-          app.get '/users', (req, res) ->
-            res.cacheable {lastModified}
+          # vary before guard
+          app.get '/users', (req, res, next) ->
             res.set 'Vary', 'User-Agent'
-            res.send "Users for #{req.header 'User-Agent'}"
+            next()
+          app.get '/users', guard()
+          app.get '/users', (req, res) ->
+            userAgent = req.header 'User-Agent'
+            res.cacheable lastModified: lastModified[userAgent]
+            res.send "Users for #{userAgent}"
 
           request(app)
             .get('/users')
@@ -133,7 +139,7 @@ describe 'guard', ->
           beforeEach ->
             requested = request(app)
               .get('/users')
-              .set('If-Modified-Since', lastModified)
+              .set('If-Modified-Since', lastModified.chrome)
               .set('User-Agent', 'chrome')
 
           it 'hits the cache', (done) ->
@@ -146,7 +152,7 @@ describe 'guard', ->
           beforeEach ->
             requested = request(app)
               .get('/users')
-              .set('If-Modified-Since', lastModified)
+              .set('If-Modified-Since', lastModified.chrome)
               .set('User-Agent', 'iOS')
 
           it 'warms the cache for the new header values', (done) ->

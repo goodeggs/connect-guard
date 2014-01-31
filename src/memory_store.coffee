@@ -1,6 +1,6 @@
 normalizeKey = (key) ->
   if typeof key is 'string'
-    key = path: key
+    key = url: key
   JSON.stringify key
 
 

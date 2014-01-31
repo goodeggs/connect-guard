@@ -1,4 +1,4 @@
-Guard
+Guard [![Build Status](https://travis-ci.org/goodeggs/connect-guard.png)](https://travis-ci.org/goodeggs/connect-guard)
 ------------
 
 Guard is connect middleware that short circuits request handling if it can send a 304 Not Modified response.

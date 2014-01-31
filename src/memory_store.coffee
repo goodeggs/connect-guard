@@ -1,8 +1,5 @@
 normalizeKey = (key) ->
-  if typeof key is 'string'
-    key = url: key
   JSON.stringify key
-
 
 module.exports = class MemoryStore
   constructor: ->

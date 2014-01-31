@@ -16,9 +16,11 @@ class Guard extends EventEmitter
     @store = store if store?
     @
 
-  invalidate: (path, callback) ->
-    @store.delete path, (err, cached) =>
-      @emit 'invalidate', path, cached
+  invalidate: (key, callback) ->
+    if typeof key is 'string'
+      key = {url: key, headers: {}}
+    @store.delete key, (err, cached) =>
+      @emit 'invalidate', key, cached
       callback(err, cached) if callback?
 
   expired: (cacheEntry, ttl) ->
@@ -43,10 +45,11 @@ class Guard extends EventEmitter
     key =
       # If in mounted app, we need to use req.originalUrl
       url: req.originalUrl or req.url
+      headers: {}
 
     # Lookup vary header values
     for header in res.get('Vary')?.split(/, */) or []
-      key[header.toLowerCase()] = req.get header
+      key.headers[header.toLowerCase()] = req.get header
     key
 
   middleware: (options={}) =>

@@ -70,7 +70,7 @@ describe 'guard', ->
             .expect(200, 'Users')
             .expect('Last-Modified', lastModified)
             .end (err, res) ->
-              cached = store.syncGet '/users'
+              cached = store.syncGet url: '/users', headers: {}
               expect(cached).to.be.ok()
               expect(cached).to.have.key 'createdAt'
               expect(cached.headers).to.have.key 'Last-Modified'
@@ -107,7 +107,7 @@ describe 'guard', ->
             .expect(200, 'Users')
             .expect('Etag', etag)
             .end (err, res) ->
-              cached = store.syncGet '/users'
+              cached = store.syncGet url: '/users', headers: {}
               expect(cached).to.be.ok()
               expect(cached.headers).to.have.key 'Etag'
               done(err)
@@ -193,7 +193,7 @@ describe 'guard', ->
         it 'sends same last-modified value for next stale request 1 minute later', (done) ->
           requested.end (err, res) ->
             lastModified = new Date(new Date(res.headers['last-modified'].valueOf() - 60*1000)).toUTCString()
-            cached = store.syncGet '/users'
+            cached = store.syncGet url: '/users', headers: {}
             cached.headers['Last-Modified'] = lastModified
             store.set '/users', cached, (err) ->
               request(app)
@@ -275,7 +275,7 @@ describe 'guard', ->
               .expect(200, 'Users')
               .expect('Last-Modified', lastModified.toUTCString())
               .end (err, res) ->
-                cached = store.syncGet '/users'
+                cached = store.syncGet url: '/users', headers: {}
                 expect(cached).to.be.ok()
                 expect(cached.headers).to.have.key 'Last-Modified'
                 expect(cached.headers['Last-Modified']).to.be lastModified.toUTCString()
@@ -295,7 +295,7 @@ describe 'guard', ->
               .expect(200, 'Users')
               .expect('Etag', etag)
               .end (err, res) ->
-                cached = store.syncGet '/users'
+                cached = store.syncGet url: '/users', headers: {}
                 expect(cached).to.be.ok()
                 expect(cached.headers).to.have.key 'Etag'
                 expect(cached.headers['Etag']).to.be etag
@@ -348,7 +348,7 @@ describe 'guard', ->
 
           describe 'after 1 minute', ->
             beforeEach (done) ->
-              cached = store.syncGet '/users'
+              cached = store.syncGet url: '/users', headers: {}
               oneMinuteEarlier = new Date(cached.createdAt.valueOf() - 60 * 1000)
               cached.createdAt = oneMinuteEarlier
               store.set '/users', cached, done
@@ -380,7 +380,7 @@ describe 'guard', ->
 
           describe 'after 1 minute', ->
             beforeEach (done) ->
-              cached = store.syncGet '/users'
+              cached = store.syncGet url: '/users', headers: {}
               oneMinuteEarlier = new Date(cached.createdAt.valueOf() - 60 * 1000)
               cached.createdAt = oneMinuteEarlier
               store.set '/users', cached, done
@@ -413,7 +413,7 @@ describe 'guard', ->
 
           describe 'after 20 seconds', ->
             beforeEach (done) ->
-              cached = store.syncGet '/users'
+              cached = store.syncGet url: '/users', headers: {}
               twentySecEarlier = new Date(cached.createdAt.valueOf() - 20 * 1000)
               cached.createdAt = twentySecEarlier
               store.set '/users', cached, done
@@ -443,7 +443,7 @@ describe 'guard', ->
 
           describe 'after 1 minute', ->
             beforeEach (done) ->
-              cached = store.syncGet '/users'
+              cached = store.syncGet url: '/users', headers: {}
               oneMinuteEarlier = new Date(cached.createdAt.valueOf() - 60 * 1000)
               cached.createdAt = oneMinuteEarlier
               store.set '/users', cached, done

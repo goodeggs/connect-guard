@@ -17,9 +17,18 @@ module.exports = class MemoryStore
 
   delete: (key, callback) ->
     process.nextTick =>
-      key = normalizeKey key
-      cached = @paths[key]
-      delete @paths[key]
+      if key.url? and key.url instanceof RegExp
+        cached = []
+        for pathString, contents of @paths
+          path = JSON.parse(pathString)
+          if key.url.test(path.url)
+            delete @paths[pathString]
+            cached.push contents
+      else
+        key = normalizeKey key
+        cached = @paths[key]
+        delete @paths[key]
+
       callback(null, cached) if callback?
 
   # Extension to store interface for test convenience

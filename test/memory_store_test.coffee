@@ -119,5 +119,23 @@ describe 'MemoryStore', ->
             expect(cached).to.be undefined
             done(err)
 
-
-
+      describe 'matching a regexp', ->
+        it 'returns the cached responses matching those URL\'s', (done) ->
+          store.delete {
+            url: new RegExp('^/us'),
+            headers: {}
+          }, (err, cached) ->
+            expect(cached.length).to.be 1
+            done(err)
+            
+        it 'removes the cached response for those URL\'s', (done) ->
+          store.delete {
+            url: new RegExp('^/us'),
+            headers: {}
+          }, (err, cached) ->
+            store.get {
+              url: '/users',
+              headers: {}
+            }, (err, cached) ->
+              expect(cached).to.be undefined
+              done(err)

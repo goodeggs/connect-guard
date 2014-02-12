@@ -478,3 +478,9 @@ describe 'guard', ->
           done()
         instance.invalidate '/users'
 
+      it 'invalidates cache with a regexp url', (done) ->
+        instance.invalidate new RegExp '^/use', (err, cached) ->
+          expect(cached).to.be.ok()
+          instance.invalidate '/users', (err, cached) ->
+            expect(cached).to.be undefined
+            done(err)

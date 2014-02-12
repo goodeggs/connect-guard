@@ -17,8 +17,8 @@ class Guard extends EventEmitter
     @
 
   invalidate: (key, callback) ->
-    if typeof key is 'string'
-      key = {url: key, headers: {}}
+    if key instanceof RegExp or typeof key is 'string'
+      key = { url: key, headers: {} }
     @store.delete key, (err, cached) =>
       @emit 'invalidate', key, cached
       callback(err, cached) if callback?

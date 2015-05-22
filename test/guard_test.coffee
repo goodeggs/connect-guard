@@ -246,7 +246,7 @@ describe 'guard', ->
           app.use guard()
           app.get '/users', (req, res) ->
             res.set 'Last-Modified', new Date().toUTCString()
-            res.send 404
+            res.sendStatus 404
 
         it 'does not cache response', (done) ->
           request(app)
@@ -484,3 +484,17 @@ describe 'guard', ->
           instance.invalidate '/users', (err, cached) ->
             expect(cached).to.be undefined
             done(err)
+
+    describe 'parseCacheControl', ->
+      it 'should parse Cache-Control', ->
+        parse = new Guard().parseCacheControl
+        expect(parse('no-cache')).to.eql 'no-cache': true
+        expect(parse('no-store')).to.eql 'no-store': true
+        expect(parse('no-transform')).to.eql 'no-transform': true
+        expect(parse('only-if-cached')).to.eql 'only-if-cached': true
+        expect(parse('max-age=0')).to.eql 'max-age': 0
+        expect(parse('max-age=60')).to.eql 'max-age': 60
+        expect(parse('max-stale=60')).to.eql 'max-stale': 60
+        expect(parse('min-fresh=60')).to.eql 'min-fresh': 60
+        expect(parse('public, max-age=60')).to.eql 'public': true, 'max-age': 60
+        expect(parse('must-revalidate, max-age=60')).to.eql 'must-revalidate': true, 'max-age': 60

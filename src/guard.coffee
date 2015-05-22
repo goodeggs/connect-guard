@@ -1,6 +1,6 @@
 {EventEmitter} = require('events')
 fresh = require 'fresh'
-{parseCacheControl} = require 'connect/lib/utils'
+onHeaders = require 'on-headers'
 MemoryStore = require './memory_store'
 
 # Next steps:
@@ -23,6 +23,19 @@ class Guard extends EventEmitter
       @emit 'invalidate', key, cached
       callback(err, cached) if callback?
 
+  parseCacheControl: (str) ->
+    directives = str.split(',')
+    obj = {}
+
+    for directive in directives
+      parts = directive.split('=')
+      key = parts.shift().trim()
+      val = parseInt(parts.shift(), 10)
+
+      obj[key] = if isNaN(val) then true else val
+
+    obj
+
   expired: (cacheEntry, ttl) ->
     # Explicitly set, expire on ttl
     if ttl >=0
@@ -30,7 +43,7 @@ class Guard extends EventEmitter
       return expiresAt < Date.now()
     # Otherwise use max-age
     return false unless cacheEntry.headers['Cache-Control']?
-    cacheControl = parseCacheControl cacheEntry.headers['Cache-Control']
+    cacheControl = @parseCacheControl cacheEntry.headers['Cache-Control']
     return false unless (maxAge = cacheControl['max-age'])?
     expiresAt = cacheEntry.createdAt.valueOf() + maxAge * 1000
     expiresAt < Date.now()
@@ -82,7 +95,7 @@ class Guard extends EventEmitter
           guard.emit 'hit', key, cached
           res.set cached.headers
           res.set 'X-Connect-Guard', 'hit'
-          return res.send 304
+          return res.sendStatus 304
 
         guard.emit 'miss', key, cached
         res.set 'X-Connect-Guard', 'miss'
@@ -98,26 +111,25 @@ class Guard extends EventEmitter
           expressAddedEtag = @get('Etag') isnt etagBeforeSend
 
         # Just before headers are written
-        res.on 'header', ->
+        onHeaders res, ->
           # Don't cache headers if not a 2xx response
           # 2xx or 304 as per rfc2616 14.26
-          return unless (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
+          if (@statusCode >= 200 and @statusCode < 300) or 304 == @statusCode
+            # Set Last-Modified if no Etag/Last-Modified header present
+            unless @get('Last-Modified')? or (@get('Etag')? and expressAddedEtag)
+              @cacheable lastModified: cached?.headers['Last-Modified'] or Date.now()
+            # Otherwise just clean up response
+            else
+              @cacheable()
 
-          # Set Last-Modified if no Etag/Last-Modified header present
-          unless @get('Last-Modified')? or (@get('Etag')? and expressAddedEtag)
-            @cacheable lastModified: cached?.headers['Last-Modified'] or Date.now()
-          # Otherwise just clean up response
-          else
-            @cacheable()
-
-          # Build cache key and cache response headers
-          headers = {}
-          for name in ['Last-Modified', 'Etag', 'Cache-Control']
-            headers[name] = @get(name) if @get(name)?
-          if Object.keys(headers).length
-            guard.store.set key, {createdAt: Date.now(), headers}, (err) ->
-              return guard.emit('error', "Error storing headers for '#{JSON.stringify key}'", err) if err?
-              guard.emit('add', key, headers)
+            # Build cache key and cache response headers
+            headers = {}
+            for name in ['Last-Modified', 'Etag', 'Cache-Control']
+              headers[name] = @get(name) if @get(name)?
+            if Object.keys(headers).length
+              guard.store.set key, {createdAt: Date.now(), headers}, (err) ->
+                return guard.emit('error', "Error storing headers for '#{JSON.stringify key}'", err) if err?
+                guard.emit('add', key, headers)
 
         next()
 

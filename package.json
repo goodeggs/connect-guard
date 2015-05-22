@@ -19,10 +19,10 @@
   ],
   "dependencies": {
     "fresh": "*",
-    "connect": "*"
+    "on-headers": "1"
   },
   "devDependencies": {
-    "express": "*",
+    "express": "4",
     "supertest": "*",
     "coffee-script": ">=1.7.1",
     "coffee-errors": "*",

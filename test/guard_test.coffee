@@ -246,7 +246,7 @@ describe 'guard', ->
           app.use guard()
           app.get '/users', (req, res) ->
             res.set 'Last-Modified', new Date().toUTCString()
-            res.send 404
+            res.sendStatus 404
 
         it 'does not cache response', (done) ->
           request(app)

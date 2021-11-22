@@ -6,6 +6,7 @@ MemoryStore = require './memory_store'
 # Next steps:
 #   Invalidate cached response based on
 #     expires in response
+
 class Guard extends EventEmitter
 
   constructor: ({store}={}) ->

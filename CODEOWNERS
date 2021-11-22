@@ -1,1 +1,5 @@
-* @goodeggs/eng-developer-enablement
+* @goodeggs/eng-developer-enablement @ryangraham-ge
+
+*.js @serhalp
+
+/src/ @shimatai
